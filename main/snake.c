@@ -43,6 +43,7 @@ typedef enum direction
 static u8g2_t u8g2;
 static u8g2_esp32_hal_t u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
 static esp_task_wdt_config_t twdt_config;
+static bool snake_map[MAP_HEIGHT][MAP_WIDTH];
 int snake_highscore = 0;
 
 void init_watchdog() {
@@ -101,6 +102,9 @@ snake_node* init_snake()
     snake_segment3->next = snake_segment4; snake_segment3->next_direction = LEFT;
     snake_segment4->next = NULL;           snake_segment4->next_direction = LEFT;
 
+    snake_map[5][9] = true;  snake_map[5][10] = true;
+    snake_map[5][11] = true; snake_map[5][12] = true;
+
     return snake_segment1;
 }
 
@@ -134,14 +138,14 @@ snake_node* add_snake_segment(snake_node* snake_head, direction snake_direction)
         break;
     case DOWN:
         snake_head->y--;
-        if(snake_head->y >= MAP_HEIGHT)
-            snake_head->y = 0;
+        if(snake_head->y < 0)
+            snake_head->y = MAP_HEIGHT - 1;
         snake_head->next_direction = UP;
         break;
     case UP:
         snake_head->y++;
-        if(snake_head->y < 0)
-            snake_head->y = MAP_HEIGHT - 1;
+        if(snake_head->y >= MAP_HEIGHT)
+            snake_head->y = 0;
         snake_head->next_direction = DOWN;
         break;
     case RIGHT:
@@ -151,7 +155,8 @@ snake_node* add_snake_segment(snake_node* snake_head, direction snake_direction)
         snake_head->next_direction = LEFT;
         break;
     }
-
+    snake_map[snake_head->y][snake_head->x] = true;
+    
     return snake_head;
 }
 
@@ -164,6 +169,7 @@ void pop_last_segment(snake_node* snake_head)
         prev = curr;
         curr = curr->next;
     }
+    snake_map[curr->y][curr->x] = false;
     free(curr);
     prev->next = NULL;
 }
@@ -172,68 +178,7 @@ void draw_snake(snake_node* snake_head, direction snake_direction)
 {
     short int x_offset = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 - 1;
     short int y_offset = 4;
-    short int x_pos, y_pos;
-
-    //draw head
-    x_pos = snake_head->x * 4;
-    y_pos = snake_head->y * 4;
-    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-        DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-        DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-        DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-        DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-
-    //draw neck and eye
-    switch(snake_head->next_direction)
-    {
-        case RIGHT:
-            x_pos += 2;
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 3 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            break;
-        case LEFT:
-            x_pos -= 2;
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 3 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            break;
-        case DOWN:
-            y_pos -= 2;
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 0 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            break;
-        case UP:
-            y_pos += 2;
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 0 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
-                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
-            break;
-    } 
+    short int x_pos, y_pos; 
 
     //draw the middle part
     snake_node* curr = snake_head->next;
@@ -334,6 +279,67 @@ void draw_snake(snake_node* snake_head, direction snake_direction)
                 DISPLAY_HEIGHT - (y_offset + (y_pos + 0 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
             break;
     }
+
+    //draw head
+    x_pos = snake_head->x * 4;
+    y_pos = snake_head->y * 4;
+    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+        DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+        DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+        DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+    u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+        DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+
+    //draw neck and eye
+    switch(snake_head->next_direction)
+    {
+        case RIGHT:
+            x_pos += 2;
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 3 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            break;
+        case LEFT:
+            x_pos -= 2;
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 3 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            break;
+        case DOWN:
+            y_pos -= 2;
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 0 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            break;
+        case UP:
+            y_pos += 2;
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 0 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 1 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 1 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            u8g2_DrawPixel(&u8g2, x_offset + (x_pos + 2 + 4 * MAP_WIDTH)  % (4 * MAP_WIDTH),
+                DISPLAY_HEIGHT - (y_offset + (y_pos + 2 + 4 * MAP_HEIGHT) % (4 * MAP_HEIGHT)));
+            break;
+    }
 }
 
 void snake_start_screen()
@@ -344,64 +350,166 @@ void snake_start_screen()
     u8g2_SendBuffer(&u8g2);      
 }
 
-void snake_end_screen()
+void snake_end_screen(int score)
 {
+    if(score > 9000) return;
     u8g2_ClearBuffer(&u8g2);                        // Clear internal memory
     u8g2_SetFont(&u8g2, u8g2_font_ncenB08_tr);      // Choose a font
     u8g2_DrawStr(&u8g2, 10, 30, "End Screen");    // Draw the string
     u8g2_SendBuffer(&u8g2);      
 }
 
-bool collision_check(snake_node* snake_head)
+bool collision_check(snake_node* snake_head, direction snake_direction)
 {
     int head_x = snake_head->x;
     int head_y = snake_head->y;
-
-    snake_node* curr = snake_head->next;
-    while(curr)
+    switch(snake_direction)
     {
-        if(curr->x == head_x && curr->y == head_y)
-            return true;
-        curr = curr->next;
+        case LEFT:
+            head_x--; break;
+        case RIGHT:
+            head_x++; break;
+        case UP:
+            head_y++; break;
+        case DOWN:
+            head_y--; break;
     }
 
-    return false;
+    return snake_map[head_y % MAP_HEIGHT][head_x % MAP_WIDTH];
 }
 
 void draw_frame()
 {
-
+    short int x1 = (DISPLAY_WIDTH - 4*MAP_WIDTH - 4) / 2 - 1;
+    short int x2 = x1 + 3 + 4 * MAP_WIDTH;
+    short int y1 = 2;
+    short int y2 = y1 + 3 + 4 * MAP_HEIGHT;
+    u8g2_DrawLine(&u8g2, x1, DISPLAY_HEIGHT - y1 ,x1, DISPLAY_HEIGHT - y2);
+    u8g2_DrawLine(&u8g2, x2, DISPLAY_HEIGHT - y1 ,x2, DISPLAY_HEIGHT - y2);
+    u8g2_DrawLine(&u8g2, x1, DISPLAY_HEIGHT - y1 ,x2, DISPLAY_HEIGHT - y1);
+    u8g2_DrawLine(&u8g2, x1, DISPLAY_HEIGHT - y2 ,x2, DISPLAY_HEIGHT - y2);
+    u8g2_DrawLine(&u8g2, x1, DISPLAY_HEIGHT - (y2 + 2) ,x2, DISPLAY_HEIGHT - (y2 + 2));
 }
 
-void draw_score()
+void draw_score(int score)
 {
-
+    char score_str[12] = "Score:0000";
+    score_str[9]  = '0' + (score % 10);
+    score_str[8]  = '0' + (score / 10) % 10;
+    score_str[7]  = '0' + (score / 100) % 10;
+    score_str[6]  = '0' + (score / 1000) % 10;
+    u8g2_SetFont(&u8g2, u8g2_font_5x8_tr);
+    u8g2_DrawStr(&u8g2, 21, DISPLAY_HEIGHT - 48, score_str);
 }
 
-void draw_rat_timer()
+void draw_animal(int x_map, int y_map, int animal_id)
 {
-
-    
+    int x = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 + x_map * 4;
+    int y = 6 + y_map * 4; 
+    switch(animal_id)
+    {
+        case 0: //lizard
+            u8g2_DrawBox(&u8g2, x+1, DISPLAY_HEIGHT - y - 1, 5, 2);
+            u8g2_DrawPixel(&u8g2, x-1, DISPLAY_HEIGHT - y);
+            u8g2_DrawPixel(&u8g2, x-1, DISPLAY_HEIGHT - (y + 1));
+            u8g2_DrawPixel(&u8g2, x, DISPLAY_HEIGHT - y);
+            u8g2_DrawPixel(&u8g2, x, DISPLAY_HEIGHT - (y + 2));
+            u8g2_DrawPixel(&u8g2, x + 1, DISPLAY_HEIGHT - (y - 1));
+            u8g2_DrawPixel(&u8g2, x + 2, DISPLAY_HEIGHT - (y + 2));
+            u8g2_DrawPixel(&u8g2, x + 4, DISPLAY_HEIGHT - (y - 1));
+            u8g2_DrawPixel(&u8g2, x + 4, DISPLAY_HEIGHT - (y + 2));
+            u8g2_DrawPixel(&u8g2, x + 6, DISPLAY_HEIGHT - y);
+            break;
+        case 1: //crab
+            break;
+        case 2: //fish
+            break;
+    }
 }
+
+void draw_animal_timer(int animal_timer)
+{
+    if(animal_timer <= 0) return;
+    char animal_time_str[3] = "00\0";
+    animal_time_str[2] += animal_timer / 10;
+    animal_time_str[1] += animal_timer % 10;
+    u8g2_SetFont(&u8g2, u8g2_font_5x8_tr);
+    u8g2_DrawStr(&u8g2, 85, DISPLAY_HEIGHT - 46, animal_time_str);
+}
+
+void generate_apple(short int *apple_x, short int *apple_y)
+{
+    short int apple_pos = rand() % (MAP_HEIGHT * MAP_WIDTH);
+    for(short int i = 0; i < MAP_HEIGHT * MAP_WIDTH; i++)
+    {
+        short int x = (apple_pos + i) % MAP_WIDTH;
+        short int y = ((apple_pos + i)  / MAP_WIDTH) % MAP_HEIGHT;
+        if(!snake_map[y][x])
+        {
+            *apple_x = x;
+            *apple_y = y;
+            return;
+        }
+    }
+    *apple_x = -1;
+    *apple_y = -1;
+}
+
+void generate_animal(short int *animal_x, short int *animal_y)
+{
+    short int animal_pos = rand() % (MAP_HEIGHT * MAP_WIDTH);
+    for(short int i = 0; i < MAP_HEIGHT * MAP_WIDTH; i++)
+    {
+        short int x = (animal_pos + i) % MAP_WIDTH;
+        short int y = ((animal_pos + i)  / MAP_WIDTH) % MAP_HEIGHT;
+        if(x != (MAP_WIDTH - 1) && !snake_map[y][x] && !snake_map[y][x+1])
+        {
+            *animal_x = x;
+            *animal_y = y;
+            return;
+        }
+    }
+    *animal_x = -1;
+    *animal_y = -1;
+}
+
+void draw_apple(short int x_map, short int y_map)
+{
+    if(x_map == -1 || y_map == -1)
+        return;
+
+    short int x = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 + x_map * 4 + 1;
+    short int y =  5 + y_map * 4;
+    u8g2_DrawPixel(&u8g2, x - 1, DISPLAY_HEIGHT - y);
+    u8g2_DrawPixel(&u8g2, x + 1, DISPLAY_HEIGHT - y);
+    u8g2_DrawPixel(&u8g2, x, DISPLAY_HEIGHT - (y - 1));
+    u8g2_DrawPixel(&u8g2, x, DISPLAY_HEIGHT - (y + 1));
+}
+
 
 void app_main()
 {
     init_display();
     init_buttons();
-    init_watchdog();
+    //init_watchdog();
 
     direction snake_direction;
     snake_node* snake_head = NULL;
-    //bool snake_map[MAP_HEIGHT][MAP_WIDTH] = { false };
+    int score;
+    short int apple_x, apple_y, apples_till_animal,
+        animal_timer, animal_id, animal_x, animal_y;
         
     while(true)
     {
-        esp_task_wdt_reset();
+        //esp_task_wdt_reset();
         snake_direction = RIGHT;
         snake_head = init_snake();
+        memset(snake_map, 0, sizeof(snake_map));
+        apple_x = -1; apple_y = -1, animal_x = -1, animal_y = -1;
+        apples_till_animal = 4, animal_timer = 0, score = 0;
         snake_start_screen(); // to be implemented
 
-        //check for any button press for start
+        //check for any button press to start
         while(true)
         {
             if(!gpio_get_level(LEFT_BUTTON))  break;
@@ -411,11 +519,10 @@ void app_main()
             vTaskDelay(50 / portTICK_PERIOD_MS);
         }
 
-        //game loop, to be implemented
+        //play loop
         while(true)
         {
-            u8g2_ClearBuffer(&u8g2);
-            //u8g2_SendBuffer(&u8g2);  
+            u8g2_ClearBuffer(&u8g2);  
 
             if(!gpio_get_level(LEFT_BUTTON) && snake_direction != RIGHT)
                 snake_direction = LEFT;
@@ -426,21 +533,65 @@ void app_main()
             if(!gpio_get_level(UP_BUTTON) && snake_direction != DOWN)
                 snake_direction = UP;
 
-            snake_head = add_snake_segment(snake_head, snake_direction);
-            //pop_last_segment(snake_head);
-            if(collision_check(snake_head))
+            if(collision_check(snake_head, snake_direction))
             {
-                //stop the game logic
+                //death trigger
                 break;
             }
 
+            snake_head = add_snake_segment(snake_head, snake_direction);
+
+            //check if apple is eaten
+            if(snake_head->x == apple_x && snake_head->y == apple_y)
+            {
+                score += 7;
+                apple_x = -1;
+                apple_y = -1;
+                snake_head->eaten = true;
+                apples_till_animal--;
+            }
+            else
+                pop_last_segment(snake_head);
+
+            //generate new apple if previous one got eaten
+            if(apple_x == -1 || apple_y == -1)
+                generate_apple(&apple_x, &apple_y);
+
+            //check if animal is eaten
+            if(animal_y == snake_head->y &&
+                (animal_x == snake_head->x || (animal_x + 1) == snake_head->x))
+            {
+                score += animal_timer;
+                animal_timer = 0;
+                animal_x = -1; animal_y = -1;
+            }
+            if(animal_timer > 0)
+                animal_timer--;
+
+            if(apples_till_animal == 0)
+            {
+                apples_till_animal = 5;
+                animal_timer = 20;
+                animal_id = 0;
+                //animal_id = rand() % 3;
+                generate_animal(&animal_x, &animal_y);
+            }
+
             draw_snake(snake_head, snake_direction);
+            draw_frame();
+            draw_score(score);
+            draw_apple(apple_x, apple_y);
+            if(animal_x != -1 && animal_y != -1)
+            {
+                draw_animal_timer(animal_timer);
+                draw_animal(animal_x, animal_y, animal_id);
+            }
 
             u8g2_SendBuffer(&u8g2);
-            vTaskDelay(100 / portTICK_PERIOD_MS);
+            vTaskDelay(50 / portTICK_PERIOD_MS);
         }
 
-        snake_end_screen();  //to be implemented
+        snake_end_screen(score);  //to be implemented
         free_snake_memory(snake_head);
 
         //wait for play again or exit button press
