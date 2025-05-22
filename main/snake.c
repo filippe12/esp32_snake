@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "sdkconfig.h"
+#include "driver/rtc_io.h"
+#include "esp_sleep.h"
 
 #include <u8g2.h>
 #include "u8g2_esp32_hal.h"
@@ -15,10 +17,10 @@
 #define MAP_WIDTH 20
 #define MAP_HEIGHT 10
 
-#define LEFT_BUTTON  16
-#define DOWN_BUTTON  17
-#define UP_BUTTON    18
-#define RIGHT_BUTTON 19
+#define LEFT_BUTTON  15
+#define DOWN_BUTTON  2
+#define UP_BUTTON    27
+#define RIGHT_BUTTON 26
 
 #define PIN_SDA 21
 #define PIN_SCL 22
@@ -44,6 +46,13 @@ static u8g2_esp32_hal_t u8g2_esp32_hal = U8G2_ESP32_HAL_DEFAULT;
 static bool snake_map[MAP_HEIGHT][MAP_WIDTH];
 int snake_highscore = 0;
 
+void init_low_power_mode()
+{
+    uint64_t buttonPinMask = (1ULL << LEFT_BUTTON) | (1ULL << DOWN_BUTTON) |
+                             (1ULL << RIGHT_BUTTON) | (1ULL << UP_BUTTON);
+    esp_sleep_enable_ext1_wakeup(buttonPinMask, ESP_EXT1_WAKEUP_ANY_HIGH);
+}
+
 void init_buttons()
 {
     int buttons[] = {LEFT_BUTTON, DOWN_BUTTON, UP_BUTTON, RIGHT_BUTTON};
@@ -51,8 +60,8 @@ void init_buttons()
     {
         gpio_reset_pin(buttons[i]);
         gpio_set_direction(buttons[i], GPIO_MODE_INPUT);
-        gpio_pullup_en(buttons[i]);    // Enable internal pull-up resistor
-        gpio_pulldown_dis(buttons[i]); // Disable internal pull-down resistor
+        gpio_pullup_dis(buttons[i]);
+        gpio_pulldown_en(buttons[i]);
     }
 }
 
@@ -590,6 +599,7 @@ void app_main()
 {
     init_display();
     init_buttons();
+    init_low_power_mode();
 
     direction snake_direction;
     snake_node* snake_head = NULL;
@@ -609,27 +619,20 @@ void app_main()
         snake_start_screen(); // to be implemented
 
         //check for any button press to start
-        while(true)
-        {
-            if(!gpio_get_level(LEFT_BUTTON))  break;
-            if(!gpio_get_level(DOWN_BUTTON))  break;
-            if(!gpio_get_level(RIGHT_BUTTON)) break;
-            if(!gpio_get_level(UP_BUTTON))    break;
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-        }
-
+        esp_light_sleep_start();
+    
         //play loop
         while(true)
         {
             u8g2_ClearBuffer(&u8g2);
 
-            if(!gpio_get_level(LEFT_BUTTON) && snake_direction != RIGHT)
+            if(gpio_get_level(LEFT_BUTTON) && snake_direction != RIGHT)
                 snake_direction = LEFT;
-            if(!gpio_get_level(DOWN_BUTTON) && snake_direction != UP)
+            if(gpio_get_level(DOWN_BUTTON) && snake_direction != UP)
                 snake_direction = DOWN;
-            if(!gpio_get_level(RIGHT_BUTTON) && snake_direction != LEFT)
+            if(gpio_get_level(RIGHT_BUTTON) && snake_direction != LEFT)
                 snake_direction = RIGHT;
-            if(!gpio_get_level(UP_BUTTON) && snake_direction != DOWN)
+            if(gpio_get_level(UP_BUTTON) && snake_direction != DOWN)
                 snake_direction = UP;
 
             if(collision_check(snake_head, snake_direction))
@@ -705,13 +708,7 @@ void app_main()
         free_snake_memory(snake_head);
 
         //wait for play again or exit button press
-        while(true)
-        {
-            if(!gpio_get_level(DOWN_BUTTON))  return; //exit the game
-            if(!gpio_get_level(UP_BUTTON))    break; //play again
-            if(!gpio_get_level(LEFT_BUTTON))  break; //play again
-            if(!gpio_get_level(RIGHT_BUTTON)) break; //play again
-            vTaskDelay(50 / portTICK_PERIOD_MS);
-        }
+        esp_light_sleep_start();
+        if(gpio_get_level(DOWN_BUTTON))  break; //exit the game
     }
 }
