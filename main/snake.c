@@ -383,19 +383,52 @@ void draw_snake(snake_node* snake_head, direction snake_direction)
 
 void snake_start_screen()
 {
-    u8g2_ClearBuffer(&u8g2);                        // Clear internal memory
-    u8g2_SetFont(&u8g2, u8g2_font_ncenB08_tr);      // Choose a font
-    u8g2_DrawStr(&u8g2, 10, 30, "Start Screen");    // Draw the string
-    u8g2_SendBuffer(&u8g2);      
+    u8g2_ClearBuffer(&u8g2);
+
+    u8g2_SetFont(&u8g2, u8g2_font_logisoso32_tr);
+    const char *title = "Snake";
+    short int title_width = u8g2_GetStrWidth(&u8g2, title);
+    short int title_x = (DISPLAY_WIDTH - title_width) / 2;
+    u8g2_DrawStr(&u8g2, title_x, 42, title);
+
+    u8g2_SetFont(&u8g2, u8g2_font_5x7_tr);
+    const char *prompt = "Press any button to play";
+    short int prompt_width = u8g2_GetStrWidth(&u8g2, prompt);
+    short int prompt_x = (DISPLAY_WIDTH - prompt_width) / 2;
+    u8g2_DrawStr(&u8g2, prompt_x, 60, prompt);
+
+    u8g2_SendBuffer(&u8g2);
 }
 
 void snake_end_screen(int score)
 {
-    if(score > 9000) return;
-    u8g2_ClearBuffer(&u8g2);                        // Clear internal memory
-    u8g2_SetFont(&u8g2, u8g2_font_ncenB08_tr);      // Choose a font
-    u8g2_DrawStr(&u8g2, 10, 30, "End Screen");    // Draw the string
-    u8g2_SendBuffer(&u8g2);      
+    u8g2_ClearBuffer(&u8g2);
+
+    u8g2_SetFont(&u8g2, u8g2_font_helvB10_tr);
+    const char *msg = (score > snake_highscore) ? "New High Score!" : "Game Over";
+    int msg_x = (DISPLAY_WIDTH - u8g2_GetStrWidth(&u8g2, msg)) / 2 - 2;
+    u8g2_DrawStr(&u8g2, msg_x, 16, msg);
+
+    char buf[32];
+    u8g2_SetFont(&u8g2, u8g2_font_6x10_tr);
+    snprintf(buf, sizeof(buf), "Score: %d", score);
+    int score_x = (DISPLAY_WIDTH - u8g2_GetStrWidth(&u8g2, buf)) / 2;
+    u8g2_DrawStr(&u8g2, score_x, 32, buf);
+
+    if (score <= snake_highscore) {
+        snprintf(buf, sizeof(buf), "Best: %d", snake_highscore);
+        int best_x = (DISPLAY_WIDTH - u8g2_GetStrWidth(&u8g2, buf)) / 2;
+        u8g2_DrawStr(&u8g2, best_x, 44, buf);
+    }
+    
+    u8g2_SetFont(&u8g2, u8g2_font_5x8_tr);
+    u8g2_DrawStr(&u8g2, 5, 60, "Play Again");
+    u8g2_DrawStr(&u8g2, 95, 60, "Exit");
+
+    u8g2_SendBuffer(&u8g2);
+
+    if (score > snake_highscore)
+        snake_highscore = score;
 }
 
 bool collision_check(snake_node* snake_head, direction snake_direction)
@@ -488,7 +521,7 @@ void draw_animal_timer(int animal_timer)
     animal_time_str[0] += animal_timer / 10;
     animal_time_str[1] += animal_timer % 10;
     u8g2_SetFont(&u8g2, u8g2_font_5x8_tr);
-    u8g2_DrawStr(&u8g2, 90, DISPLAY_HEIGHT - 47, animal_time_str);
+    u8g2_DrawStr(&u8g2, 96, DISPLAY_HEIGHT - 48, animal_time_str);
 }
 
 void generate_apple(short int *apple_x, short int *apple_y)
@@ -616,7 +649,7 @@ void app_main()
         apple_x = -1; apple_y = -1, animal_x = -1, animal_y = -1;
         apples_till_animal = 4, animal_timer = 0, score = 0;
         animal_id = rand() % 3;
-        snake_start_screen(); // to be implemented
+        snake_start_screen();
 
         //check for any button press to start
         esp_light_sleep_start();
@@ -704,11 +737,16 @@ void app_main()
             vTaskDelay(50 / portTICK_PERIOD_MS);
         }
 
-        snake_end_screen(score);  //to be implemented
+        snake_end_screen(score);
         free_snake_memory(snake_head);
 
         //wait for play again or exit button press
         esp_light_sleep_start();
-        if(gpio_get_level(DOWN_BUTTON))  break; //exit the game
+        /*
+        if(!gpio_get_level(LEFT_BUTTON))
+            continue; //play again
+        else
+            break; //exit game
+        */
     }
 }
