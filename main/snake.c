@@ -83,7 +83,7 @@ void init_display()
     u8g2_SendBuffer(&u8g2);
 }
 
-snake_node* init_snake()
+snake_node* snake_init()
 {
     snake_node* snake_segment1 = (snake_node*)malloc(sizeof(snake_node));
     snake_node* snake_segment2 = (snake_node*)malloc(sizeof(snake_node));
@@ -106,7 +106,7 @@ snake_node* init_snake()
     return snake_segment1;
 }
 
-void free_snake_memory(snake_node* snake_head)
+void snake_free_memory(snake_node* snake_head)
 {
     snake_node* prev = snake_head;
     while(snake_head)
@@ -117,7 +117,7 @@ void free_snake_memory(snake_node* snake_head)
     }
 }
 
-snake_node* add_snake_segment(snake_node* snake_head, direction snake_direction)
+snake_node* snake_add_segment(snake_node* snake_head, direction snake_direction)
 {
     snake_node* new_head = (snake_node*)malloc(sizeof(snake_node));
     new_head->next = snake_head;
@@ -158,7 +158,7 @@ snake_node* add_snake_segment(snake_node* snake_head, direction snake_direction)
     return snake_head;
 }
 
-void pop_last_segment(snake_node* snake_head)
+void snake_pop_last_segment(snake_node* snake_head)
 {
     snake_node* curr = snake_head;
     snake_node* prev = snake_head;
@@ -172,7 +172,7 @@ void pop_last_segment(snake_node* snake_head)
     prev->next = NULL;
 }
 
-bool apple_in_front(snake_node* snake_head, direction snake_direction, short int apple_x, short int apple_y)
+bool snake_apple_in_front(snake_node* snake_head, direction snake_direction, short int apple_x, short int apple_y)
 {
     switch(snake_direction)
     {
@@ -209,7 +209,7 @@ bool apple_in_front(snake_node* snake_head, direction snake_direction, short int
     }
 }
 
-void draw_snake(snake_node* snake_head, direction snake_direction)
+void snake_draw_snake(snake_node* snake_head, direction snake_direction)
 {
     short int x_offset = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 - 1;
     short int y_offset = 4;
@@ -431,7 +431,7 @@ void snake_end_screen(int score)
         snake_highscore = score;
 }
 
-bool collision_check(snake_node* snake_head, direction snake_direction)
+bool snake_collision_check(snake_node* snake_head, direction snake_direction)
 {
     int head_x = snake_head->x;
     int head_y = snake_head->y;
@@ -450,7 +450,7 @@ bool collision_check(snake_node* snake_head, direction snake_direction)
     return snake_map[head_y % MAP_HEIGHT][head_x % MAP_WIDTH];
 }
 
-void draw_frame()
+void snake_draw_frame()
 {
     short int x1 = (DISPLAY_WIDTH - 4*MAP_WIDTH - 4) / 2 - 1;
     short int x2 = x1 + 3 + 4 * MAP_WIDTH;
@@ -463,7 +463,7 @@ void draw_frame()
     u8g2_DrawLine(&u8g2, x1, DISPLAY_HEIGHT - (y2 + 2) ,x2, DISPLAY_HEIGHT - (y2 + 2));
 }
 
-void draw_score(int score)
+void snake_draw_score(int score)
 {
     char score_str[12] = "Score:0000";
     score_str[9]  = '0' + (score % 10);
@@ -474,7 +474,7 @@ void draw_score(int score)
     u8g2_DrawStr(&u8g2, 21, DISPLAY_HEIGHT - 48, score_str);
 }
 
-void draw_animal(int x_map, int y_map, int animal_id)
+void snake_draw_animal(int x_map, int y_map, int animal_id)
 {
     int x = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 + x_map * 4;
     int y = 6 + y_map * 4; 
@@ -514,7 +514,7 @@ void draw_animal(int x_map, int y_map, int animal_id)
     }
 }
 
-void draw_animal_timer(int animal_timer)
+void snake_draw_animal_timer(int animal_timer)
 {
     if(animal_timer <= 0) return;
     char animal_time_str[3] = "00";
@@ -524,7 +524,7 @@ void draw_animal_timer(int animal_timer)
     u8g2_DrawStr(&u8g2, 96, DISPLAY_HEIGHT - 48, animal_time_str);
 }
 
-void generate_apple(short int *apple_x, short int *apple_y)
+void snake_generate_apple(short int *apple_x, short int *apple_y)
 {
     short int apple_pos = rand() % (MAP_HEIGHT * MAP_WIDTH);
     for(short int i = 0; i < MAP_HEIGHT * MAP_WIDTH; i++)
@@ -542,7 +542,7 @@ void generate_apple(short int *apple_x, short int *apple_y)
     *apple_y = -1;
 }
 
-void generate_animal(short int *animal_x, short int *animal_y)
+void snake_generate_animal(short int *animal_x, short int *animal_y)
 {
     short int animal_pos = rand() % (MAP_HEIGHT * MAP_WIDTH);
     for(short int i = 0; i < MAP_HEIGHT * MAP_WIDTH; i++)
@@ -560,7 +560,7 @@ void generate_animal(short int *animal_x, short int *animal_y)
     *animal_y = -1;
 }
 
-void draw_apple(short int x_map, short int y_map)
+void snake_draw_apple(short int x_map, short int y_map)
 {
     if(x_map == -1 || y_map == -1)
         return;
@@ -573,7 +573,7 @@ void draw_apple(short int x_map, short int y_map)
     u8g2_DrawPixel(&u8g2, x, DISPLAY_HEIGHT - (y + 1));
 }
 
-void open_snake_mouth(snake_node* snake_head, direction snake_direction)
+void snake_open_mouth(snake_node* snake_head, direction snake_direction)
 {
     short int x = (DISPLAY_WIDTH - 4*MAP_WIDTH) / 2 + snake_head->x * 4;
     short int y = 5 + snake_head->y * 4;
@@ -614,15 +614,15 @@ void open_snake_mouth(snake_node* snake_head, direction snake_direction)
     }
 }
 
-void death_scene(snake_node* snake_head, direction snake_direction, int score)
+void snake_death_scene(snake_node* snake_head, direction snake_direction, int score)
 {
     for(int i = 0; i < 9; i++)
     {
         u8g2_ClearBuffer(&u8g2);
-        draw_frame();
-        draw_score(score);
+        snake_draw_frame();
+        snake_draw_score(score);
         if(i % 2)
-            draw_snake(snake_head, snake_direction);
+            snake_draw_snake(snake_head, snake_direction);
         u8g2_SendBuffer(&u8g2);
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
@@ -644,7 +644,7 @@ void app_main()
     {
         //initialize variables
         snake_direction = RIGHT;
-        snake_head = init_snake();
+        snake_head = snake_init();
         memset(snake_map, 0, sizeof(snake_map));
         apple_x = -1; apple_y = -1, animal_x = -1, animal_y = -1;
         apples_till_animal = 4, animal_timer = 0, score = 0;
@@ -668,13 +668,13 @@ void app_main()
             if(gpio_get_level(UP_BUTTON) && snake_direction != DOWN)
                 snake_direction = UP;
 
-            if(collision_check(snake_head, snake_direction))
+            if(snake_collision_check(snake_head, snake_direction))
             {
-                death_scene(snake_head, snake_direction, score);
+                snake_death_scene(snake_head, snake_direction, score);
                 break;
             }
 
-            snake_head = add_snake_segment(snake_head, snake_direction);
+            snake_head = snake_add_segment(snake_head, snake_direction);
 
             //check if apple is eaten
             if(snake_head->x == apple_x && snake_head->y == apple_y)
@@ -686,11 +686,11 @@ void app_main()
                 apples_till_animal--;
             }
             else
-                pop_last_segment(snake_head);
+                snake_pop_last_segment(snake_head);
 
             //generate new apple if previous one got eaten
             if(apple_x == -1 || apple_y == -1)
-                generate_apple(&apple_x, &apple_y);
+                snake_generate_apple(&apple_x, &apple_y);
 
             //check if animal is eaten
             if(animal_timer > 0 && animal_y == snake_head->y &&
@@ -713,24 +713,24 @@ void app_main()
                 if(apple_x != -1 && apple_y != -1)
                 {
                     snake_map[apple_y][apple_x] = true;
-                    generate_animal(&animal_x, &animal_y);
+                    snake_generate_animal(&animal_x, &animal_y);
                     snake_map[apple_y][apple_x] = false;
                 }
                 else
-                    generate_animal(&animal_x, &animal_y);
+                    snake_generate_animal(&animal_x, &animal_y);
             }
 
             //render everything
-            draw_snake(snake_head, snake_direction);
-            if(apple_in_front(snake_head, snake_direction, apple_x, apple_y))
-                open_snake_mouth(snake_head, snake_direction);
-            draw_frame();
-            draw_score(score);
-            draw_apple(apple_x, apple_y);
+            snake_draw_snake(snake_head, snake_direction);
+            if(snake_apple_in_front(snake_head, snake_direction, apple_x, apple_y))
+                snake_open_mouth(snake_head, snake_direction);
+            snake_draw_frame();
+            snake_draw_score(score);
+            snake_draw_apple(apple_x, apple_y);
             if(animal_x != -1 && animal_y != -1 && animal_timer > 0)
             {
-                draw_animal_timer(animal_timer);
-                draw_animal(animal_x, animal_y, animal_id);
+                snake_draw_animal_timer(animal_timer);
+                snake_draw_animal(animal_x, animal_y, animal_id);
             }
 
             u8g2_SendBuffer(&u8g2);
@@ -738,7 +738,7 @@ void app_main()
         }
 
         snake_end_screen(score);
-        free_snake_memory(snake_head);
+        snake_free_memory(snake_head);
 
         //wait for play again or exit button press
         esp_light_sleep_start();
